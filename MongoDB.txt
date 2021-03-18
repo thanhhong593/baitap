@@ -1,0 +1,84 @@
+ZIPDB
+- Hiển thị tất cả các documents
+- Chèn thêm 1 document mới
+insert
+- Tìm các documents có city là PALMER
+find({city:"PALMER"})
+- Tìm các documents có dân số >100000
+find({pop:{$gt:3}})
+- Tìm dân số của thành phố FISHERS ISLAND
+db.zips.aggregate([{$match:{"city":'FISHERS ISLAND'}},{$project:{_id:0,city:1,pop:1}}])
+- Tìm các thành phố có dân số từ 10 - 50
+db.zips.find({$and:[{pop:{$gte:10}},{pop:{$lte:50}}]})
+- Tìm tất cả các thành phố của bang MA có dân số trên 500
+db.zips.aggregate([{$match:{"state":'MA',pop:{$gte:500}}},{$project:{_id:0,city:1,pop:1}}])
+- Tìm tất cả các bang (distinct)
+db.zips.distinct( "state" )
+- Tìm tất cả các bang mà có chứa ít nhất 1 thành phố có dân số trên 100000
+db.zips.aggregate([{$match:{"pop":{$gte:100000}}},{$project:{_id:0,city:1,state:1,pop:1}}])
+- Tính dân số trung bình của mỗi bang
+db.zips.aggregate([{$group:{_id:"$state",avgPop:{$avg:'$pop'}}}])
+- Bang WA có bao nhiêu city
+db.zips.aggregate([{$match:{"state":'MA'}},{$group:{_id:"$state",city:{$sum:1}}}])
+- Tính số city của mỗi bang
+db.zips.aggregate([{$group:{_id:"$state",city:{$sum:1}}}])
+- Tìm tất cả các bang có tổng dân số trên 10000000
+db.zips.aggregate([{$group:{_id:"$state",sumPop:{$sum:"$pop"}}},{$match:{sumPop:{$gt:10000000}}}])
+
+BIKEDB
+
+1/ Tìm sản phẩm có giá cao nhất.
+db.products.aggregate([{$group:{_id:0,maxPrice:{$max:'$price'}}},{$lookup:{from:'products',localField:'maxPrice',foreignField:'price',as:'kq'}}]).pretty()
+
+2/ Tìm danh sách sản phẩm chưa bán được lần nào.
+db.products.aggregate([{$lookup:{from:'orders',localField:'_id',foreignField:'orderDetails.productID',as:'ls'}},{$match:{ls:{$size:0}}}]).pretty()
+3/ Thống kê số khách hàng theo từng bang.
+db.customers.aggregate({$group:{_id:'$address.state',sumCustomer:{$sum:1}}})
+
++getNumberCustomerBySate() : Map<String, Integer>
+4/ Tính tổng tiền của đơn hàng khi biết mã số đơn hàng.
+db.orders.aggregate([{$match:{_id:9}},{$unwind:'$orderDetails'},{$replaceWith:'$orderDetails'},{$group:{_id:null,tong:{$sum:'$lineTotal'}}}])
+
+5/ Đếm số đơn hàng của từng khách hàng.
+db.orders.aggregate([{$match:{_id:9}},{$unwind:'$orderDetails'},{$replaceWith:'$orderDetails'},{$group:{_id:null,tong:{$sum:'$lineTotal'}}}])
+
++ getOrdersByCustomers() : Map<Customer, Integer>
+6/ Tính tổng số lượng của từng sản phẩm đã bán ra.
+db.orders.aggregate([{$unwind:'$orderDetails'},{$replaceWith:'$orderDetails'},{$group:{_id:'$productID',sumQuantity:{$sum:'$quantity'}}}]).pretty()
+
++ getTotalProduct(): Map<Product, Integer>
+7/ Dùng text search để tìm kiếm sản phẩm theo tên sản phẩm và mô tả của sản phẩm.
+db.products.createIndex({productName:'text'})
+db.products.find({$text:{$search:"Ritchey"}})
+
+8/ Tính tổng tiền của tất cả các hóa đơn trong một ngày nào đó.
+
+9/ Thêm dữ liệu vào từng collection.
+10/ Cập nhật giá của sản phẩm khi biết mã sản phẩm.
+11/ Xóa tất cả các khách hàng chưa mua hàng.
+
+NewsDB
+
+a. Thêm dữ liệu về người dùng (User) lần đầu tiên có các lời bình luận (Comment) về tin tức (News) có sẳn
+vào CSDL.
++ addUser(u: User): boolean
+
+b. Tìm các tin tức theo tags hoặc theo loại tin tức (tìm tương đối), yêu cầu dùng text search trên các cột (tags)
+và loại tin tức (newsCategories).
++ getNewsByTagsOrCategoriesName(value: String): List<News>
+
+c. Thống kê tổng số lượng các tin tức có các lời bình luận từ từng người dùng (chỉ thống kê những
+người dùng có ít nhất 3 lượt bình luận trở lên). Thông tin kết quả gồm thông tin của người dùng và số
+lượng bình luận cho tin tức. 
+size comment =>3
+
++ getStatistics(): Map<User, Integer>
+
+Bổ sung thêm các câu truy vấn
+d. Tìm những tin tức có người dùng ở địa chỉ email nào đó bình luận? Yêu cầu tạo index trước khi tìm.
++ listNewsByUserEmail(email: String) : List<News>
+
+e. Tìm danh sách người dùng khi biết tên hoặc email (tìm chính xác). Yêu cầu phải tạo index trước khi tìm.
++ listUsers(keyword: String) : List<User>
+
+f. Start server với host là tên host của máy sinh viên làm bài, lắng nghe ở cổng 9999.
